@@ -1,0 +1,78 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  admin
+  student
+}
+
+enum Difficulty {
+  beginner
+  intermediate
+  advanced
+}
+
+model User {
+  id              String          @id @default(cuid())
+  name            String
+  email           String          @unique
+  password        String
+  role            Role            @default(student)
+  lichessUsername String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  puzzles         Puzzle[]
+  attempts        PuzzleAttempt[]
+  assignments     PuzzleAssignment[] @relation("StudentAssignments")
+}
+
+model Puzzle {
+  id             String          @id @default(cuid())
+  title          String
+  description    String
+  fenPosition    String
+  solutionMoves  String[]
+  difficulty     Difficulty
+  tags           String[]
+  visibility     Boolean         @default(true)
+  createdById    String
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  createdBy      User            @relation(fields: [createdById], references: [id])
+  attempts       PuzzleAttempt[]
+  assignments    PuzzleAssignment[]
+}
+
+model PuzzleAssignment {
+  id        String   @id @default(cuid())
+  puzzleId  String
+  studentId String
+  createdAt DateTime @default(now())
+
+  puzzle    Puzzle   @relation(fields: [puzzleId], references: [id], onDelete: Cascade)
+  student   User     @relation("StudentAssignments", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([puzzleId, studentId])
+}
+
+model PuzzleAttempt {
+  id        String   @id @default(cuid())
+  userId    String
+  puzzleId  String
+  attempts  Int      @default(1)
+  solved    Boolean  @default(false)
+  solvedAt  DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  puzzle    Puzzle   @relation(fields: [puzzleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, puzzleId])
+}
